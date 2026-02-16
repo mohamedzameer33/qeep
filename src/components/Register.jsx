@@ -11,7 +11,6 @@ const Register = () => {
     repeatPassword: ''
   });
   const [message, setMessage] = useState('');
-  const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -21,7 +20,6 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
-    setIsSuccess(false);
     setLoading(true);
 
     if (form.password !== form.repeatPassword) {
@@ -31,77 +29,93 @@ const Register = () => {
     }
 
     try {
-      const res = await axios.post('http://localhost:8080/api/auth/register', null, {
-        params: {
-          username: form.username.trim(),
-          email: form.email.trim(),
-          password: form.password,
-          repeatPassword: form.repeatPassword
-        }
+      const res = await axios.post('/api/auth/register', {
+        username: form.username.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        repeatPassword: form.repeatPassword
       });
 
-      // Success
+      // Success — res.data is object from our backend
+      localStorage.setItem('qeep_uid', res.data.uid);
       localStorage.setItem('qeep_username', res.data.username);
-      localStorage.setItem('qeep_userId', res.data.userId);
+      localStorage.setItem('qeep_coins', res.data.coins);
 
-      setMessage('Account created! Welcome to Qeep Zoo');
-      setIsSuccess(true);
-
-      setTimeout(() => navigate('/'), 1500);
+      setMessage('Registered Successfully! Welcome to QEEP ZOO');
+      setTimeout(() => navigate('/'), 2000);
 
     } catch (err) {
-      const errMsg = err.response?.data?.message 
-                  || err.response?.data 
-                  || err.message 
-                  || 'Server error. Try again.';
-      
-      setMessage(typeof errMsg === 'string' ? errMsg : 'Registration failed');
-      setIsSuccess(false);
+      // THIS FIXES THE CRASH
+      const errorMsg = err.response?.data?.message 
+                    || err.response?.data 
+                    || err.message 
+                    || 'Server error, try again!';
+
+      setMessage(typeof errorMsg === 'string' ? errorMsg : 'Registration failed!');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={styles.title}>QEEP Register</h2>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)',
+      display: 'flex', justifyContent: 'center', alignItems: 'center',
+      fontFamily: '"Comic Sans MS", cursive, sans-serif'
+    }}>
+      <div style={{
+        background: 'white', padding: '50px 40px', borderRadius: '30px',
+        width: '420px', maxWidth: '90%', textAlign: 'center',
+        border: '6px solid #ff69b4', boxShadow: '0 20px 50px rgba(255,105,180,0.5)'
+      }}>
+        <h2 style={{color: '#ff1493', fontSize: '38px', marginBottom: '20px', textShadow: '2px 2px #ff69b4'}}>
+          QEEP Register
+        </h2>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <input name="username" type="text" placeholder="Username *" value={form.username} onChange={handleChange} required disabled={loading} style={styles.input} />
-          <input name="email" type="email" placeholder="Email (optional)" value={form.email} onChange={handleChange} disabled={loading} style={styles.input} />
-          <input name="password" type="password" placeholder="Password *" value={form.password} onChange={handleChange} required disabled={loading} style={styles.input} />
-          <input name="repeatPassword" type="password" placeholder="Repeat Password *" value={form.repeatPassword} onChange={handleChange} required disabled={loading} style={styles.input} />
+        <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '18px'}}>
+          <input name="username" placeholder="Username" value={form.username} onChange={handleChange} required 
+                 style={{padding: '16px', borderRadius: '20px', border: '4px solid #ffb6c1', fontSize: '18px', background: '#fff0f5'}} />
+          <input name="email" type="email" placeholder="Email (optional)" value={form.email} onChange={handleChange}
+                 style={{padding: '16px', borderRadius: '20px', border: '4px solid #ffb6c1', fontSize: '18px', background: '#fff0f5'}} />
+          <input name="password" type="password" placeholder="Password" value={form.password} onChange={handleChange} required
+                 style={{padding: '16px', borderRadius: '20px', border: '4px solid #ffb6c1', fontSize: '18px', background: '#fff0f5'}} />
+          <input name="repeatPassword" type="password" placeholder="Repeat Password" value={form.repeatPassword} onChange={handleChange} required
+                 style={{padding: '16px', borderRadius: '20px', border: '4px solid #ffb6c1', fontSize: '18px', background: '#fff0f5'}} />
 
-          <button type="submit" disabled={loading} style={styles.button}>
-            {loading ? 'Creating...' : 'Create Account'}
+          <button type="submit" disabled={loading} style={{
+            padding: '18px', background: '#ff69b4', color: 'white', border: 'none',
+            borderRadius: '20px', fontSize: '22px', fontWeight: 'bold', marginTop: '10px',
+            cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1
+          }}>
+            {loading ? 'Creating Account...' : 'JOIN QEEP ZOO'}
           </button>
         </form>
 
         {message && (
-          <p style={{ ...styles.message, color: isSuccess ? 'green' : '#e74c3c' }}>
+          <p style={{
+            marginTop: '25px',
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: message.includes('Success') || message.includes('Welcome') ? '#00ff9d' : '#ff3366',
+            textShadow: message.includes('Success') ? '0 0 10px #00ff9d' : '0 0 10px #ff3366',
+            padding: '15px',
+            borderRadius: '15px',
+            background: 'rgba(0,0,0,0.1)'
+          }}>
             {message}
           </p>
         )}
 
-        <p style={styles.switch}>
-          Already have account? <span onClick={() => navigate('/login')} style={styles.link}>Login here</span>
+        <p style={{marginTop: '30px', color: '#666', fontSize: '17px'}}>
+          Already have account?{' '}
+          <span onClick={() => navigate('/login')} style={{color: '#ff69b4', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline'}}>
+            Login here
+          </span>
         </p>
       </div>
     </div>
   );
-};
-
-const styles = {
-  container: { minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: '"Segoe UI", Arial, sans-serif' },
-  card: { background: 'white', padding: '40px 30px', borderRadius: '20px', boxShadow: '0 15px 35px rgba(0,0,0,0.3)', width: '380px', textAlign: 'center' },
-  title: { margin: '0 0 30px', color: '#333', fontSize: '28px', fontWeight: 'bold' },
-  form: { display: 'flex', flexDirection: 'column', gap: '15px' },
-  input: { padding: '14px', border: '2px solid #ddd', borderRadius: '10px', fontSize: '16px', outline: 'none' },
-  button: { padding: '14px', background: '#667eea', color: 'white', border: 'none', borderRadius: '10px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' },
-  message: { marginTop: '15px', fontWeight: 'bold' },
-  switch: { marginTop: '20px', color: '#666' },
-  link: { color: '#667eea', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }
 };
 
 export default Register;

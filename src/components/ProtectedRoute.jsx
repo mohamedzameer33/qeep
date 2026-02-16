@@ -1,9 +1,11 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 function ProtectedRoute({ children, isAuthenticated }) {
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+  const userId=localStorage.getItem('qeep_userId');
+  const location = useLocation();
+  if (!isAuthenticated,!userId) {
+    return <Navigate to="/" state={{from:location}} replace />;
   }
 
   return children;

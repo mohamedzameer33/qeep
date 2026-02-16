@@ -1,137 +1,192 @@
-// src/components/FriendZoo.jsx — FINAL 100% FIXED
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { FaCoins } from 'react-icons/fa';
+import Header from './header';
+import { Link } from 'react-router-dom';
+import Footer from './Footer';
 
 export default function FriendZoo() {
   const [coins, setCoins] = useState(0);
-  const [myValue, setMyValue] = useState(20);
-  const [currentOwner, setCurrentOwner] = useState('None');
-  const [myPets, setMyPets] = useState([]);
   const [marketUsers, setMarketUsers] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [buyMessage, setBuyMessage] = useState('');
 
-  const navigate = useNavigate();
-  const userId = localStorage.getItem('qeep_userId');
-  const myUserId = parseInt(userId);
-
-  const refreshAllData = async () => {
-    try {
-      const [myRes, allRes] = await Promise.all([
-        axios.get(`http://localhost:8080/api/game/user?id=${myUserId}`),
-        axios.get('http://localhost:8080/api/game/users')
-      ]);
-
-      const myData = myRes.data;
-      const allUsers = allRes.data;
-
-      setCoins(myData.coins);
-      setMyValue(myData.petValue);
-      setCurrentOwner(
-        myData.currentOwnerId
-          ? allUsers.find(u => u.id === myData.currentOwnerId)?.username || 'Someone'
-          : 'Free'
-      );
-
-      setMyPets(allUsers.filter(u => u.currentOwnerId === myUserId));
-      setMarketUsers(
-        allUsers.filter(u => u.id !== myUserId && u.currentOwnerId !== myUserId)
-      );
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const myUid = localStorage.getItem('qeep_uid');
 
   useEffect(() => {
-    if (!userId) {
-      setIsLoggedIn(false);
-      setLoading(false);
+    if (!myUid) {
+      alert("Login first!");
+      window.location.href = '/login';
       return;
     }
-    refreshAllData().then(() => setLoading(false));
-  }, [userId]);
 
-  const buyPet = async (petId) => {
-    const pet = marketUsers.find(u => u.id === petId);
-    if (!pet) return;
-    if (coins < pet.petValue) return alert("Not enough coins!");
-    if (!window.confirm(`Buy ${pet.username} for ${pet.petValue} coins?`)) return;
+    const loadData = async () => {
+      try {
+        const res = await axios.get('/api/pet/list');
+        const users = res.data;
 
+        const me = users.find(u => u.uid === myUid);
+        if (me) {
+          setCoins(me.coins);
+          localStorage.setItem('qeep_coins', me.coins);
+        }
+
+        setMarketUsers(users.filter(u => u.uid !== myUid));
+        setLoading(false);
+      } catch (err) {
+        console.error(err);
+        setLoading(false);
+      }
+    };
+
+    loadData();
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, [myUid]);
+
+  const buyPet = async (petUid) => {
     try {
-      await axios.post(`http://localhost:8080/api/game/buy?buyerId=${myUserId}&petId=${petId}`);
-      await refreshAllData();  // ONLY BACKEND DECIDES PRICE
-      alert(`You bought ${pet.username} for ${pet.petValue} coins!`);
+      const res = await axios.post('/api/pet/buy', {
+        buyerUid: myUid,
+        petUid: petUid
+      });
+
+      setBuyMessage("SUCCESS! " + res.data);
+      setTimeout(() => setBuyMessage(''), 4000);
+
+      // Refresh
+      const refresh = await axios.get('/api/pet/list');
+      const users = refresh.data;
+      const me = users.find(u => u.uid === myUid);
+      if (me) setCoins(me.coins);
+      setMarketUsers(users.filter(u => u.uid !== myUid));
+
     } catch (err) {
-      alert(err.response?.data || "Can't buy this pet");
+      setBuyMessage(err.response?.data || "Can't buy this pet!");
+      setTimeout(() => setBuyMessage(''), 3000);
     }
   };
 
-  if (!isLoggedIn) {
+  if (loading) return <div style={{textAlign:'center', padding:'100px', fontSize:'32px', color:'white', background:'#2e0909ff', minHeight:'100vh'}}>Loading Zoo...</div>;
+
+  if (marketUsers.length === 0) {
     return (
-      <div style={{minHeight:'100vh', background:'linear-gradient(135deg,#667eea,#764ba2)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:'white'}}>
-        <h1 style={{fontSize:'48px'}}>Login Required</h1>
-        <button onClick={() => navigate('/login')} style={{marginTop:'30px', padding:'18px 50px', background:'#FF6B6B', border:'none', borderRadius:'50px', color:'white', fontSize:'24px', cursor:'pointer'}}>
-          Go to Login
-        </button>
+      <div style={{minHeight:'100vh', background:'#2e0909ff', display:'flex', flexDirection:'column'}}>
+        <Header />
+        <div style={{flex:1, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', color:'white'}}>
+          <h1 style={{fontSize:'48px', color:'#c2fd43'}}>Friend Zoo</h1>
+          <h3><FaCoins /> {coins} Zp</h3>
+          <p style={{fontSize:'28px', marginTop:'80px'}}>No Pets in Market!</p>
+        </div>
+        <Footer />
       </div>
     );
   }
 
-  if (loading) return <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'32px', color:'#333'}}>Loading Zoo...</div>;
+  const currentUser = marketUsers[currentIndex];
+  const isQeepMaster = currentUser.uid === 'QP0000111';
+  const isMyPet = currentUser.ownerUid === myUid;
+
+  // OWNER DISPLAY LOGIC
+  let ownerText = "FREE PET";
+  let ownerColor = '#32CD32';
+  if (currentUser.ownerUid) {
+    if (currentUser.ownerUid === myUid) {
+      ownerText = "OWNED BY YOU";
+      ownerColor = '#32CD32';
+    } else {
+      const owner = marketUsers.find(u => u.uid === currentUser.ownerUid);
+      ownerText = `OWNED BY ${owner?.username || "Someone"}`;
+      ownerColor = '#DC143C';
+    }
+  }
+
+  // CAN BUY LOGIC — FIXED!
+  const canBuy = !isQeepMaster && !isMyPet;  // You can buy if it's not yours and not QeepMaster
 
   return (
-    <div style={{padding:'40px', background:'linear-gradient(to bottom,#87CEEB,#E0FFFF)', minHeight:'100vh', fontFamily:'Arial, sans-serif'}}>
-      <h1 style={{textAlign:'center', fontSize:'50px', color:'#333'}}>Friend Zoo</h1>
+    <div style={{minHeight:'100vh', background:'#2e0909ff', display:'flex', flexDirection:'column'}}>
+      <Header />
+      <div style={{flex:1, padding:'20px'}}>
+        <h1 style={{textAlign:'center', color:'#c2fd43', fontSize:'35px'}}>Friend Zoo</h1>
+        <h3 style={{textAlign:'center', color:'#ffc400ff'}}><FaCoins /> {coins} Zp</h3>
 
-      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(250px,1fr))', gap:'25px', margin:'40px 0'}}>
-        <div style={{background:'white', padding:'30px', borderRadius:'20px', textAlign:'center', boxShadow:'0 10px 25px rgba(0,0,0,0.2)'}}>
-          <h3 style={{color:'#FFD700'}}>Your Coins</h3>
-          <p style={{fontSize:'50px', fontWeight:'bold', color:'#FFD700'}}>{coins}</p>
-        </div>
-        <div style={{background:'white', padding:'30px', borderRadius:'20px', textAlign:'center', boxShadow:'0 10px 25px rgba(0,0,0,0.2)'}}>
-          <h3 style={{color:'#FF69B4'}}>Your Value</h3>
-          <p style={{fontSize:'50px', fontWeight:'bold', color:'#FF1493'}}>{myValue}</p>
-        </div>
-        <div style={{background:'white', padding:'30px', borderRadius:'20px', textAlign:'center', boxShadow:'0 10px 25px rgba(0,0,0,0.2)'}}>
-          <h3 style={{color:'#4169E1'}}>Your Owner</h3>
-          <p style={{fontSize:'38px', color:currentOwner==='Free'?'#32CD32':'#DC143C', fontWeight:'bold'}}>{currentOwner}</p>
+        {buyMessage && (
+          <div style={{
+            position:'fixed', top:'20px', left:'50%', transform:'translateX(-50%)',
+            background: buyMessage.includes('SUCCESS') ? '#32CD32' : '#DC143C',
+            color:'white', padding:'15px 30px', borderRadius:'50px',
+            fontSize:'20px', fontWeight:'bold', zIndex:9999
+          }}>
+            {buyMessage}
+          </div>
+        )}
+
+        <div style={{maxWidth:'380px', margin:'30px auto'}}>
+          <div style={{background:'white', padding:'20px', borderRadius:'25px', textAlign:'center', boxShadow:'0 15px 40px rgba(0,0,0,0.5)'}}>
+            <img style={{borderRadius:'50%', width:'120px', height:'120px', border:'5px solid #c2fd43'}}
+                 src="https://bamstechnologies.org/qeep--/images/user.png" alt="" />
+
+<h3  
+  onMouseEnter={() => setHoveredUser(currentUser.username)}
+  onMouseLeave={() => setHoveredUser(null)}
+  style={{margin:'20px 0', fontSize:'24px', fontWeight:'bold', color:'#333'}}
+>
+  <Link 
+    to={`/profile/${currentUser.username}`}  // This opens UserProfile
+    style={{textDecoration:'none', color:'#333'}}
+  >
+    {currentUser.username}
+  </Link>
+</h3>
+
+            <p>Value: <strong style={{color:'#FF4500', fontSize:'25px'}}>{currentUser.price}</strong> Zp</p>
+
+            <p style={{
+              fontSize:'22px',
+              margin:'15px 0',
+              color: ownerColor,
+              fontWeight: 'bold'
+            }}>
+              {ownerText}
+            </p>
+
+            {isQeepMaster && (
+              <p style={{color:'#ff1493', fontWeight:'bold', fontSize:'22px'}}>
+                QEEP MASTER — CANNOT BUY
+              </p>
+            )}
+
+            <div style={{display:'flex', gap:'10px', marginTop:'30px'}}>
+              <button onClick={() => setCurrentIndex(prev => prev > 0 ? prev - 1 : marketUsers.length - 1)}
+                      style={{flex:1, padding:'14px', background:'#666', color:'white', borderRadius:'30px'}}>Previous</button>
+
+              <button 
+                onClick={() => buyPet(currentUser.uid)}
+                disabled={!canBuy}
+                style={{
+                  flex:2, padding:'16px',
+                  background: canBuy ? '#32CD32' : '#999',
+                  color:'white', borderRadius:'50px', fontSize:'20px', fontWeight:'bold',
+                  cursor: canBuy ? 'pointer' : 'not-allowed',
+                  opacity: canBuy ? 1 : 0.6
+                }}
+              >
+                {isQeepMaster ? 'GOD' : isMyPet ? 'ALREADY OWNED' : (currentUser.ownerUid ? 'TRADE' : 'BUY PET')}
+              </button>
+
+              <button onClick={() => setCurrentIndex(prev => prev < marketUsers.length - 1 ? prev + 1 : 0)}
+                      style={{flex:1, padding:'14px', background:'#666', color:'white', borderRadius:'30px'}}>Next</button>
+            </div>
+          </div>
+
+          <p style={{textAlign:'center', color:'#aaa', marginTop:'15px'}}>
+            {currentIndex + 1} / {marketUsers.length}
+          </p>
         </div>
       </div>
-
-      <h2 style={{fontSize:'36px', margin:'40px 0 20px', color:'#333'}}>My Pets ({myPets.length})</h2>
-      {myPets.length === 0 ? <p style={{textAlign:'center', fontSize:'28px', color:'#888'}}>Zoo empty!</p> :
-        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:'25px'}}>
-          {myPets.map(pet => (
-            <div key={pet.id} style={{background:'white', padding:'25px', borderRadius:'20px', textAlign:'center'}}>
-              <div style={{fontSize:'90px'}}>Pet</div>
-              <h3 style={{fontSize:'28px'}}>{pet.username}</h3>
-              <p>Value: {pet.petValue} coins</p>
-              <p style={{color:'#32CD32', fontWeight:'bold'}}>Owned by YOU</p>
-            </div>
-          ))}
-        </div>
-      }
-
-      <h2 style={{fontSize:'36px', margin:'50px 0 20px', color:'#333'}}>Market</h2>
-      {marketUsers.length === 0 ? <p style={{textAlign:'center', fontSize:'28px', color:'#666'}}>You own everyone!</p> :
-        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:'25px'}}>
-          {marketUsers.map(user => (
-            <div key={user.id} style={{background:'white', padding:'25px', borderRadius:'20px', textAlign:'center'}}>
-              <div style={{fontSize:'80px'}}>{user.currentOwnerId ? 'Pet' : 'Person'}</div>
-              <h3 style={{fontSize:'26px'}}>{user.username}</h3>
-              <p>Price: <strong style={{color:'#FF4500'}}>{user.petValue}</strong> coins</p>
-              <button onClick={() => buyPet(user.id)} style={{
-                marginTop:'15px', padding:'14px 32px',
-                background: user.currentOwnerId ? '#FF4500' : '#32CD32',
-                color:'white', border:'none', borderRadius:'30px', fontSize:'18px', fontWeight:'bold', cursor:'pointer'
-              }}>
-                {user.currentOwnerId ? `Steal for ${user.petValue}` : `Buy for ${user.petValue}`}
-              </button>
-            </div>
-          ))}
-        </div>
-      }
+      <Footer />
     </div>
   );
 }

@@ -2,50 +2,63 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const Login = () => {
+const API = "http://localhost:8080";   // ✅ REAL BACKEND
+
+const Login = ({ setIsAuthenticated }) => {
   const navigate = useNavigate();
   const [form, setForm] = useState({ username: '', password: '' });
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setMessage('');
 
-  try {
-    const res = await axios.post('http://localhost:8080/api/auth/login', null, {
-      params: { username: form.username, password: form.password }
-    });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage('');
+    setLoading(true);
 
-const data = res.data;
-
-localStorage.setItem('qeep_username', data.username);   // ← ADD THIS LINE
-localStorage.setItem('qeep_userId', data.userId); 
-
-    setMessage('Welcome back to Qeep Zoo!');
-    
-    setTimeout(() => {
-      navigate('/welcome', {
-        state: {
-          userId: data.userId,
-          username: data.username,
-          coins: data.coins,
-          petValue: data.petValue
-        }
+    try {
+      const res = await axios.post(`${API}/api/auth/login`, {
+        username: form.username.trim(),
+        password: form.password
       });
-    }, 1000);
 
-  } catch (err) {
-    setMessage(err.response?.data?.message || 'Wrong username or password!');
-  }
-};
+      const data = res.data;
+
+      // Save user details
+      localStorage.setItem('qeep_uid', data.uid);
+      localStorage.setItem('qeep_username', data.username);
+      localStorage.setItem('qeep_coins', data.coins || 100);
+      localStorage.setItem('qeep_isMaster', data.isMaster ? "1" : "0");
+      localStorage.setItem('qeep_isQeepMaster', data.isQeepMaster ? "1" : "0");
+
+      setIsAuthenticated(true);
+      setMessage(`Welcome back ${data.username}!`);
+
+      setTimeout(() => {
+        navigate('/welcome');
+      }, 1200);
+
+    } catch (err) {
+      const backendError =
+        err.response?.data?.message ||
+        err.response?.data ||
+        'Invalid username or password';
+
+      setMessage(backendError.toString());
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
         <h2 style={styles.title}>QEEP Login</h2>
+        <div style={styles.logo}>QEEP ZOO</div>
+
         <form onSubmit={handleSubmit} style={styles.form}>
           <input
             name="username"
@@ -54,8 +67,10 @@ localStorage.setItem('qeep_userId', data.userId);
             value={form.username}
             onChange={handleChange}
             required
+            disabled={loading}
             style={styles.input}
           />
+
           <input
             name="password"
             type="password"
@@ -63,75 +78,118 @@ localStorage.setItem('qeep_userId', data.userId);
             value={form.password}
             onChange={handleChange}
             required
+            disabled={loading}
             style={styles.input}
           />
 
-          <button type="submit" style={styles.button}>
-            Enter Qeep
+          <button type="submit" disabled={loading} style={styles.button}>
+            {loading ? 'Entering Zoo...' : 'ENTER QEEP'}
           </button>
         </form>
 
         {message && (
           <p style={{
             ...styles.message,
-            color: message.includes('Welcome') ? 'green' : '#e74c3c'
+            color: message.includes('Welcome') ? '#00ff9d' : '#ff3366'
           }}>
             {message}
           </p>
         )}
 
         <p style={styles.switch}>
-          New here?{' '}
+          New slave?{' '}
           <span onClick={() => navigate('/register')} style={styles.link}>
-            Create Account
+            Register Here
           </span>
         </p>
+
+        <div style={styles.hint}>
+          Hint: Login as <b>QeepMaster</b> / <b>qeep123</b>
+        </div>
       </div>
     </div>
   );
 };
 
+// --- styles unchanged ---
+
 const styles = {
   container: {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    fontFamily: '"Segoe UI", Arial, sans-serif'
+    fontFamily: '"Comic Sans MS", cursive, sans-serif'
   },
   card: {
     background: 'white',
-    padding: '40px 30px',
-    borderRadius: '20px',
-    boxShadow: '0 15px 35px rgba(0,0,0,0.3)',
-    width: '380px',
-    textAlign: 'center'
+    padding: '50px 40px',
+    borderRadius: '30px',
+    boxShadow: '0 20px 50px rgba(255,105,180,0.5)',
+    width: '420px',
+    maxWidth: '90%',
+    textAlign: 'center',
+    border: '6px solid #ff69b4'
   },
-  title: { margin: '0 0 30px', color: '#333', fontSize: '28px', fontWeight: 'bold' },
-  form: { display: 'flex', flexDirection: 'column', gap: '15px' },
+  logo: {
+    fontSize: '42px',
+    fontWeight: 'bold',
+    color: '#ff1493',
+    marginBottom: '20px'
+  },
+  title: {
+    margin: '0 0 10px',
+    color: '#ff1493',
+    fontSize: '36px',
+    fontWeight: 'bold'
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+    marginTop: '20px'
+  },
   input: {
-    padding: '14px',
-    border: '2px solid #ddd',
-    borderRadius: '10px',
-    fontSize: '16px',
-    outline: 'none',
-    transition: '0.3s'
+    padding: '18px',
+    border: '4px solid #ffb6c1',
+    borderRadius: '20px',
+    fontSize: '18px',
+    background: '#fff0f5'
   },
   button: {
-    padding: '14px',
-    background: '#667eea',
+    padding: '20px',
+    background: '#ff69b4',
     color: 'white',
     border: 'none',
-    borderRadius: '10px',
-    fontSize: '18px',
+    borderRadius: '20px',
+    fontSize: '22px',
     fontWeight: 'bold',
-    cursor: 'pointer',
-    marginTop: '10px'
+    cursor: 'pointer'
   },
-  message: { marginTop: '15px', fontWeight: 'bold' },
-  switch: { marginTop: '20px', color: '#666' },
-  link: { color: '#667eea', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }
+  message: {
+    marginTop: '25px',
+    fontWeight: 'bold',
+    fontSize: '18px',
+    padding: '12px',
+    borderRadius: '10px'
+  },
+  switch: {
+    marginTop: '30px',
+    color: '#666',
+    fontSize: '17px'
+  },
+  link: {
+    color: '#ff69b4',
+    cursor: 'pointer',
+    fontWeight: 'bold'
+  },
+  hint: {
+    marginTop: '20px',
+    fontSize: '14px',
+    color: '#ff69b4',
+    fontWeight: 'bold'
+  }
 };
 
 export default Login;

@@ -6,17 +6,16 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    host: 'localhost',
-    strictPort: true,
+    host: true,
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
-        // THIS IS THE MAGIC LINE FOR VITE 7
-        configure: (proxy) => {
+        rewrite: (path) => path.replace(/^\/api/, ''),
+        configure: (proxy, options) => {
           proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('Proxying:', req.method, req.url);
+            proxyReq.setHeader('Origin', 'http://localhost:5173');
           });
         }
       }

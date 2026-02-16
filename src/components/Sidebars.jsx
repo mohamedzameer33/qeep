@@ -10,6 +10,7 @@ const Sidebars = () => {
   // Get the total number of users
   const count = allUsers.length;
     return (
+        <div className="bars">
         <div className='sidebar'>
           
             <ul style={{listStyle:"none"}}>  
@@ -39,7 +40,7 @@ Latest qeepers</Link> </li>
 My recent visitors </Link> </li>
             
             </ul>
-        </div>
+        </div></div>
     )
 }
 

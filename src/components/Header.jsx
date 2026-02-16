@@ -9,14 +9,14 @@ const handleLogout = () => {
 
   return (
     <div className='qeep'>
-      <img src="https://bamstechnologies.org/qeep--/images/logo.webp" alt="Logo" />
-      <button
+      <img style={{height:"40px"}} src="https://bamstechnologies.org/qeep--/images/logo.webp" alt="Logo" />
+      {/* <button
         onClick={handleLogout}
         className='spinbtn'
         style={{ position: 'absolute', left: '1450px' }}
       >
         Logout
-      </button>
+      </button> */}
     </div>
   );
 };

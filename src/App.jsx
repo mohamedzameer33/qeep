@@ -6,9 +6,18 @@ import SpinWheel from './components/SpinWheeel'; // Fixed typo: SpinWheeel → S
 import Login from './components/Login';
 import Register from './components/Register';
 import Layout from './components/Layout';
+import './App.css';
 import ProtectedRoute from './components/ProtectedRoute';
 import TicTacToe from './components/Tictactoe';
 import FriendZoo from './components/FriendZoo'; // Fixed: .module → .jsx
+import Zoo from './components/Zoo';
+import Myowner from './components/Myowner';
+import Myzoo from './components/Myzoo';
+import Myprofile from './components/Myprofile';
+import PurchaseHistory from './components/PurchaseHistory.Jsx';
+import Userprofile from './components/Userprofile';
+import AdminDashboard from './Admin/AdminDashboard';
+import SmallMasterPanel from './Admin/SmallMasterPanel';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -86,11 +95,78 @@ function App() {
           }
         />
 
+
+
         <Route
           path="/friendszoo"
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <Zoo />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/petshop"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated}>
               <FriendZoo />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/myowner"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <Myowner />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/myzoo"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <Myzoo />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/myprofile"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <Myprofile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+path="/profile/:username"           element={
+            <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <Userprofile />
+            </ProtectedRoute>
+          }
+        />
+
+        
+        <Route
+          path="/purchasehistory"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <PurchaseHistory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/master"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <SmallMasterPanel />
             </ProtectedRoute>
           }
         />

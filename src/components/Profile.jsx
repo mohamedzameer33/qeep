@@ -36,16 +36,16 @@ const Profile = () => {
         alt="" 
       />
       
-      <Link style={{ textDecoration: "none", color: "black" }} to={`/profile/${name}`}>
+      <Link style={{ textDecoration: "none", color: "black" }} to="/myprofile">
         <h1 className='zammy'>
           {name}
-          {loggedInUser && (
+          {/* {loggedInUser && (
             <img 
               style={{ height: "38px", position: "relative", bottom: "-7px" }} 
               src={bluetick} 
               alt="blue tick" 
             />
-          )}
+          )} */}
         </h1>
       </Link>
       
